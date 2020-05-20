@@ -5,6 +5,7 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const db = require("./helper/db")();
 const cors = require('cors')
+const bodyParser = require('body-parser');
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -12,12 +13,17 @@ var todosRouter = require('./routes/todos');
 
 var app = express();
 
+app.use(function(req, res, next) {
+  res.header("Access-Control-Allow-Origin", "*"); // update to match the domain you will make the request from
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+  next();
+});
+
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'pug');
 
 app.use(logger('dev'));
-app.set("api_secret_key", require("./config").api_secret_key);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
@@ -42,8 +48,8 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
-app.use(cors({
-  origin: 'http://localhost:3000'
-}));
+// app.use(cors());
+
+// app.use(bodyParser.json());
 
 module.exports = app;

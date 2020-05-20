@@ -6,52 +6,65 @@ var User = require("../models/User");
 var fs = require('fs')
 var config = require('../config')
 const cors = require('cors')
+var bodyParser = require('body-parser')
 
-router.post("/getToken", (req, res, next) => {
-  const { username, password } = req.body;
-  User.findOne({ username })
+router.post("/login", cors(), (req, res, next) => {
+  const { username, email, password } = req.body;
+
+  if(!email || !password) {
+    res.status(500).json({
+      status: false,
+      message: "Lütfen tüm zorunlu alanları doldurun."
+    });
+  }
+
+  User.findOne({ email })
     .then(user => {
-      console.log('user', user, user.password, password)
-      //Girilen username değerinde bir kayıt varsa burası çalışacaktır.
 
-      bcrypt.compare(password, user.password)
+      if(password !== user.password) {
+        res.status(500).json({
+          status: false,
+          message: "Kullanıcı adı veya şifre yanlış."
+        });
+      }
+
+      const payLoad = { email };
+      const token = jwt.sign(payLoad, { key: fs.readFileSync('./private.pem'), passphrase: config.pass }, { algorithm: 'RS256', expiresIn: '1m' /* minutes */ })
+
+      /*try {
+        const verify = jwt.verify(token, fs.readFileSync('./public.pem'), { algorithms: ['RS256'] })
+        console.log('verify', verify)
+      } catch(err) {
+        res.send('başarısız')
+      }*/
+
+      res.json({
+        status: true,
+        email: user.email,
+        password: user.password,
+        uid: user._id,
+        token
+      });
+
+      /*bcrypt.compare(password, user.password)
         .then(data => {
 
-          //Veritabanındaki şifrelenmiş password ile kullanıcıdan alınan password birbirlerini doğruluyorsa eğer data değeri true gelecektir. Aksi taktirde false değeri gelecektir.
-          if (data)
+          if (!data)
             res.json({
               status: false,
-              "message": "Kullanıcı adı veya şifre yanlış..."
+              message: "Kullanıcı adı veya şifre yanlış."
             });
           else {
-            //Eğer data parametresi true değerinde geldiyse token oluşturulacaktır.
-            const payLoad = { username };
-
-            const token = jwt.sign(payLoad, { key: fs.readFileSync('./private.pem'), passphrase: config.pass }, { algorithm: 'RS256' })
-
-            /*try {
-              const verify = jwt.verify(token, fs.readFileSync('./public.pem'), { algorithms: ['RS256'] })
-              console.log('verify', verify)
-            } catch(err) {
-              res.send('başarısız')
-            }*/
-
-            // const token = jwt.sign(payLoad, req.app.get("api_secret_key"));
-            res.json({
-              status: true,
-              username,
-              token
-            });
-
+            //şifre doğru
           }
-        });
+        });*/
+
     })
-    .catch(error => {
-      res.json({
+    .catch(() => {
+      res.status(500).json({
         status: false,
-        "message": error
+        message: 'Kullanıcı bulunamadı.'
       });
-      console.log("Beklenmeyen bir hatayla karşılaşıldı...")
     });
 });
 
@@ -64,29 +77,46 @@ router.get('/', (req, res, next) => {
 });
 
 router.post("/create", cors(), (req, res, next) => {
-  console.log('body', req.body)
-  const username = req.body.username;
-  new User({
-    username: req.body.username,
-    email: req.body.email,
-    password: req.body.password
-  }).save().then(() => {
+  const email = req.body.email;
 
-    User.findOne({ username })
-      .then((user) => {
-        res.json({
-          status: true,
-          id: user._id,
-          message: "Kullanıcı başarıyla oluşturuldu."
+  console.log('email', email)
+
+  User.findOne({ email })
+    .then((user) => {
+
+      if(user) {
+        res.status(500).json({
+          status: false,
+          message: "Bu e-posta adresi ile daha önce kayıt olunmuş."
+        })
+      } else {
+
+        new User({
+          username: req.body.username,
+          email: req.body.email,
+          password: req.body.password
+        }).save().then(() => {
+
+          User.findOne({ email })
+            .then((user) => {
+              res.json({
+                status: true,
+                id: user._id,
+                message: "Kullanıcı başarıyla oluşturuldu."
+              });
+            })
+
+        }).catch((err) => {
+          res.status(500).json({
+            status: false,
+            message: "Kullanıcı oluşturulamadı."
+          });
         });
-      })
 
-  }).catch((err) => {
-    res.json({
-      status: false,
-      message: "Kullanıcı oluşturulamadı."
-    });
-  });
+      }
+
+    })
+
 });
 
 module.exports = router;
