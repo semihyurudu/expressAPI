@@ -6,6 +6,11 @@ var logger = require('morgan');
 const db = require("./helper/db")();
 const cors = require('cors')
 const bodyParser = require('body-parser');
+var jwtMiddleware = require('express-jwt')
+
+var fs = require('fs')
+var config = require('./config')
+
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
@@ -36,6 +41,7 @@ app.use('/todos', todosRouter);
 app.use(function(req, res, next) {
   next(createError(404));
 });
+
 
 // error handler
 app.use(function(err, req, res, next) {

@@ -7,9 +7,10 @@ var fs = require('fs')
 var config = require('../config')
 const cors = require('cors')
 var bodyParser = require('body-parser')
+var authentication = require('../helper/authentication')
 
 router.post("/login", cors(), (req, res, next) => {
-  const { username, email, password } = req.body;
+  const { email, password } = req.body;
 
   if(!email || !password) {
     res.status(500).json({
@@ -29,14 +30,13 @@ router.post("/login", cors(), (req, res, next) => {
       }
 
       const payLoad = { email };
-      const token = jwt.sign(payLoad, { key: fs.readFileSync('./private.pem'), passphrase: config.pass }, { algorithm: 'RS256', expiresIn: '1m' /* minutes */ })
-
-      /*try {
-        const verify = jwt.verify(token, fs.readFileSync('./public.pem'), { algorithms: ['RS256'] })
-        console.log('verify', verify)
-      } catch(err) {
-        res.send('başarısız')
-      }*/
+      const token = jwt.sign(payLoad, {
+        key: fs.readFileSync('./private.pem'),
+        passphrase: config.pass
+      }, {
+        algorithm: 'RS256',
+        expiresIn: '60m' /* minutes */
+      })
 
       res.json({
         status: true,
@@ -68,7 +68,57 @@ router.post("/login", cors(), (req, res, next) => {
     });
 });
 
-router.get('/', (req, res, next) => {
+
+
+
+
+router.get("/refresh-token", cors(), (req, res) => {
+
+  jwt.verify(req.header('Authorization').split(' ')[1], fs.readFileSync('./public.pem'), {
+    algorithms: ['RS256'],
+  }, (err, user) => {
+    if (err) {
+      console.log('eer', err)
+      return res.sendStatus(403);
+    }
+
+    const newToken = jwt.sign({
+      email: user.email
+    }, {
+      key: fs.readFileSync('./private.pem'),
+      passphrase: config.pass
+    }, {
+      algorithm: 'RS256',
+      expiresIn: '60m' /* minutes */
+    })
+
+    res.json({
+      token: newToken
+    })
+
+  });
+
+
+
+
+
+  const newToken = jwt.sign({}, {
+    key: fs.readFileSync('./private.pem'),
+    passphrase: config.pass
+  }, {
+    algorithm: 'RS256',
+    expiresIn: '60m' /* minutes */
+  })
+
+
+});
+
+
+
+
+
+
+router.get('/', authentication.authenticateJWT, (req, res, next) => {
   User.find().then((users) => {
     res.json(users);
   }).catch((err) => {
