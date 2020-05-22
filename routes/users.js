@@ -29,13 +29,13 @@ router.post("/login", cors(), (req, res, next) => {
         });
       }
 
-      const payLoad = { email };
+      const payLoad = { email, user_id: user._id };
       const token = jwt.sign(payLoad, {
         key: fs.readFileSync('./private.pem'),
         passphrase: config.pass
       }, {
         algorithm: 'RS256',
-        expiresIn: '60m' /* minutes */
+        expiresIn: '4w' /* minutes */
       })
 
       res.json({
@@ -68,22 +68,18 @@ router.post("/login", cors(), (req, res, next) => {
     });
 });
 
+router.get("/refresh-token", authentication.authenticateJWT, (req, res) => {
 
-
-
-
-router.get("/refresh-token", cors(), (req, res) => {
-
-  jwt.verify(req.header('Authorization').split(' ')[1], fs.readFileSync('./public.pem'), {
+  jwt.verify(token, fs.readFileSync('./public.pem'), {
     algorithms: ['RS256'],
   }, (err, user) => {
     if (err) {
-      console.log('eer', err)
       return res.sendStatus(403);
     }
 
     const newToken = jwt.sign({
-      email: user.email
+      email: user.email,
+      user_id: user._id
     }, {
       key: fs.readFileSync('./private.pem'),
       passphrase: config.pass
@@ -98,23 +94,7 @@ router.get("/refresh-token", cors(), (req, res) => {
 
   });
 
-
-
-
-
-  const newToken = jwt.sign({}, {
-    key: fs.readFileSync('./private.pem'),
-    passphrase: config.pass
-  }, {
-    algorithm: 'RS256',
-    expiresIn: '60m' /* minutes */
-  })
-
-
 });
-
-
-
 
 
 
@@ -126,7 +106,7 @@ router.get('/', authentication.authenticateJWT, (req, res, next) => {
   });
 });
 
-router.post("/create", cors(), (req, res, next) => {
+router.post("/create", (req, res, next) => {
   const email = req.body.email;
 
   console.log('email', email)
@@ -145,13 +125,15 @@ router.post("/create", cors(), (req, res, next) => {
           username: req.body.username,
           email: req.body.email,
           password: req.body.password
-        }).save().then(() => {
+        }).save().then((userDetail) => {
 
-          User.findOne({ email })
-            .then((user) => {
+          console.log('userDetail', userDetail)
+
+          User.findOne({ _id: userDetail._id })
+            .then(() => {
               res.json({
                 status: true,
-                id: user._id,
+                id: userDetail._id,
                 message: "Kullanıcı başarıyla oluşturuldu."
               });
             })
