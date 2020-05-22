@@ -18,15 +18,12 @@ router.get('/', authentication.authenticateJWT, (req, res, next) => {
 });
 
 
-router.post("/create", authentication.authenticateJWT, (req, res, next) => {
-  const name = req.body.email;
+router.post("/create", (req, res, next) => {
+  const {name, uid} = req.body;
+  const user_id = req.header('Authorization') ? (jwt.decode(req.header('Authorization').replace('Bearer ', ''))['user_id']) : (uid)
 
-  console.log('name', name)
-
-  List.findOne({ name })
+  List.findOne({ name, user_id })
     .then((list) => {
-
-      console.log('list', list)
 
       if(list) {
         res.status(500).json({
@@ -37,19 +34,26 @@ router.post("/create", authentication.authenticateJWT, (req, res, next) => {
 
         new List({
           name,
-          user_id: req.header('Authorization')['user_id'],
+          user_id,
           items: []
         }).save().then((listDetail) => {
 
           List.findOne({ _id: listDetail._id })
             .then(() => {
+
               res.json({
+                status: true,
+                message: "Liste başarıyla oluşturuldu.",
+                id: listDetail._id
+              });
+
+              /*res.json({
                 id: listDetail._id,
                 items: listDetail.items,
                 name: listDetail.name,
-                user_id: req.header('Authorization')['user_id'],
+                user_id,
                 message: "Liste başarıyla oluşturuldu."
-              });
+              });*/
             })
 
         }).catch((err) => {
@@ -64,5 +68,18 @@ router.post("/create", authentication.authenticateJWT, (req, res, next) => {
     })
 
 });
+
+
+
+router.get('/', authentication.authenticateJWT, (req, res) => {
+  List.find().then((lists) => {
+    res.json(lists);
+  }).catch((err) => {
+    res.json(err);
+  });
+});
+
+
+
 
 module.exports = router;

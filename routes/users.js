@@ -9,7 +9,7 @@ const cors = require('cors')
 var bodyParser = require('body-parser')
 var authentication = require('../helper/authentication')
 
-router.post("/login", cors(), (req, res, next) => {
+router.post("/login", (req, res) => {
   const { email, password } = req.body;
 
   if(!email || !password) {
@@ -85,7 +85,7 @@ router.get("/refresh-token", authentication.authenticateJWT, (req, res) => {
       passphrase: config.pass
     }, {
       algorithm: 'RS256',
-      expiresIn: '60m' /* minutes */
+      expiresIn: '180m' /* minutes */
     })
 
     res.json({
@@ -95,8 +95,6 @@ router.get("/refresh-token", authentication.authenticateJWT, (req, res) => {
   });
 
 });
-
-
 
 router.get('/', authentication.authenticateJWT, (req, res, next) => {
   User.find().then((users) => {
