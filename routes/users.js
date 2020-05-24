@@ -107,8 +107,6 @@ router.get('/', authentication.authenticateJWT, (req, res, next) => {
 router.post("/create", (req, res, next) => {
   const email = req.body.email;
 
-  console.log('email', email)
-
   User.findOne({ email })
     .then((user) => {
 
@@ -124,8 +122,6 @@ router.post("/create", (req, res, next) => {
           email: req.body.email,
           password: req.body.password
         }).save().then((userDetail) => {
-
-          console.log('userDetail', userDetail)
 
           User.findOne({ _id: userDetail._id })
             .then(() => {

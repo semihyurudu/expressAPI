@@ -37,9 +37,7 @@ router.post("/add", authentication.authenticateJWT, (req, res, next) => {
         createdOn: new Date(),
         list_id,
         user_id
-      }).save().then((newItem) => {
-
-        console.log('newItem', newItem)
+      }).save().then(() => {
 
         res.json({
           status: true,
