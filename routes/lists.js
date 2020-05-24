@@ -9,18 +9,24 @@ const cors = require('cors')
 var bodyParser = require('body-parser')
 var authentication = require('../helper/authentication')
 
-router.get('/', authentication.authenticateJWT, (req, res, next) => {
-  List.find().then((users) => {
-    res.json(users);
-  }).catch((err) => {
-    res.json(err);
-  });
-});
-
 
 router.post("/create", (req, res, next) => {
   const {name, uid} = req.body;
   const user_id = req.header('Authorization') ? (jwt.decode(req.header('Authorization').replace('Bearer ', ''))['user_id']) : (uid)
+
+  if(!name) {
+    res.status(500).json({
+      status: false,
+      message: "Lütfen liste adı giriniz."
+    })
+    return false
+  } else if(!user_id) {
+    res.status(500).json({
+      status: false,
+      message: "Kullanıcı bilgisi bulunamadı."
+    })
+    return false
+  }
 
   List.findOne({ name, user_id })
     .then((list) => {
@@ -38,13 +44,15 @@ router.post("/create", (req, res, next) => {
           items: []
         }).save().then((listDetail) => {
 
-          List.findOne({ _id: listDetail._id })
+          List.findOne({ _id: listDetail._id, user_id })
             .then(() => {
 
               res.json({
-                status: true,
                 message: "Liste başarıyla oluşturuldu.",
-                id: listDetail._id
+                id: listDetail._id,
+                name: listDetail.name,
+                items: listDetail.items,
+                user_id
               });
 
               /*res.json({
@@ -64,16 +72,13 @@ router.post("/create", (req, res, next) => {
         });
 
       }
-
     })
-
 });
 
 
-
 router.get('/', authentication.authenticateJWT, (req, res) => {
-  List.find().then((lists) => {
-    res.json(lists);
+  List.find({user_id: jwt.decode(req.header('Authorization').replace('Bearer ', ''))['user_id']}).then((lists) => {
+    res.json(lists)
   }).catch((err) => {
     res.json(err);
   });

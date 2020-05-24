@@ -4,12 +4,6 @@ const fs = require('fs')
 module.exports = {
   authenticateJWT: (req, res, next) => {
 
-    console.log('req', {
-      protocol: req.protocol,
-      host: req.get('host'),
-      pathname: req.originalUrl
-    })
-
     let token = req.header('Authorization')
 
     if (!token)
