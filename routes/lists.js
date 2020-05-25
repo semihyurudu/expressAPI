@@ -108,7 +108,7 @@ router.post("/create", (req, res, next) => {
 
               res.json({
                 message: "Liste başarıyla oluşturuldu.",
-                id: listDetail._id,
+                id: listDetail.id,
                 name: listDetail.name,
                 items: listDetail.items,
                 user_id
