@@ -3,15 +3,9 @@ var mongoose = require("mongoose");
 var Schema = mongoose.Schema;
 
 var listSchema = new Schema({
-    name: {
-      $type: String
-    },
-    user_id: {
-      $type: String
-    },
-    items: {
-      $type: Array
-    }
+    name: String,
+    user_id: String,
+    items: Array
   }, {
     toJSON: {
       transform: function (doc, ret) {

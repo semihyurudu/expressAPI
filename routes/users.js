@@ -46,19 +46,6 @@ router.post("/login", (req, res) => {
         token
       });
 
-      /*bcrypt.compare(password, user.password)
-        .then(data => {
-
-          if (!data)
-            res.json({
-              status: false,
-              message: "Kullanıcı adı veya şifre yanlış."
-            });
-          else {
-            //şifre doğru
-          }
-        });*/
-
     })
     .catch(() => {
       res.status(500).json({
