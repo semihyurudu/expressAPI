@@ -100,7 +100,7 @@ router.get('/', authentication.authenticateJWT, (req, res, next) => {
   User.find().then((users) => {
     res.json(users);
   }).catch((err) => {
-    res.json(err);
+    res.status(500).json(err);
   });
 });
 

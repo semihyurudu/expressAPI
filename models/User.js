@@ -3,9 +3,15 @@ var mongoose = require("mongoose");
 var Schema = mongoose.Schema;
 
 var userSchema = new Schema({
-    username: String,
-    email: String,
-    password: String,
+    username: {
+      $type: String
+    },
+    email: {
+      $type: String
+    },
+    password: {
+      $type: String
+    },
   }, {
     toJSON: {
       transform: function (doc, ret) {

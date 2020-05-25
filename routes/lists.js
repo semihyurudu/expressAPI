@@ -8,6 +8,71 @@ var config = require('../config')
 const cors = require('cors')
 var bodyParser = require('body-parser')
 var authentication = require('../helper/authentication')
+var helper = require('../helper/helper')
+var {ObjectID} = require('mongodb')
+
+router.get('/', authentication.authenticateJWT, (req, res) => {
+  const user_id = jwt.decode(req.header('Authorization').replace('Bearer ', ''))['user_id']
+
+  List.find({user_id}).then((lists) => {
+    res.json(lists)
+  }).catch((err) => {
+    res.status(500).json(err);
+  });
+});
+
+
+router.post('/remove', authentication.authenticateJWT, (req, res) => {
+  const user_id = jwt.decode(req.header('Authorization').replace('Bearer ', ''))['user_id']
+  const { list_id } = req.body
+
+  if(!list_id) {
+    res.status(500).json({
+      status: false,
+      message: "Silinecek liste bulunamadı."
+    })
+    return false
+  }
+
+  if(!helper.checkObjectId(list_id)) {
+    res.status(500).json({
+      status: false,
+      message: "Geçersiz ID."
+    })
+    return false
+  }
+
+
+  List.findOne({user_id, _id: ObjectID(list_id)}).then((list) => {
+    if(list) {
+
+      List.deleteOne({user_id, _id: ObjectID(list_id)}).then((removed) => {
+
+        if(removed.ok) {
+          res.json({
+            status: true,
+            message: "Liste başarıyla silindi."
+          })
+        } else {
+          res.status(500).json({
+            status: true,
+            message: "Liste silinirken bir sorun oluştu."
+          })
+        }
+
+      }).catch((err) => {
+        res.status(500).json(err);
+      });
+
+    } else {
+      res.status(500).json({
+        status: false,
+        message: "Bu liste zaten silinmiş."
+      })
+    }
+  })
+
+});
 
 
 router.post("/create", (req, res, next) => {
@@ -18,12 +83,6 @@ router.post("/create", (req, res, next) => {
     res.status(500).json({
       status: false,
       message: "Lütfen liste adı giriniz."
-    })
-    return false
-  } else if(!user_id) {
-    res.status(500).json({
-      status: false,
-      message: "Kullanıcı bilgisi bulunamadı."
     })
     return false
   }
@@ -55,13 +114,6 @@ router.post("/create", (req, res, next) => {
                 user_id
               });
 
-              /*res.json({
-                id: listDetail._id,
-                items: listDetail.items,
-                name: listDetail.name,
-                user_id,
-                message: "Liste başarıyla oluşturuldu."
-              });*/
             })
 
         }).catch((err) => {
@@ -73,15 +125,6 @@ router.post("/create", (req, res, next) => {
 
       }
     })
-});
-
-
-router.get('/', authentication.authenticateJWT, (req, res) => {
-  List.find({user_id: jwt.decode(req.header('Authorization').replace('Bearer ', ''))['user_id']}).then((lists) => {
-    res.json(lists)
-  }).catch((err) => {
-    res.json(err);
-  });
 });
 
 

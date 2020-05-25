@@ -3,10 +3,18 @@ var mongoose = require("mongoose");
 var Schema = mongoose.Schema;
 
 var itemSchema = new Schema({
-    createdOn: String,
-    data: Object,
-    list_id: String,
-    user_id: String
+    createdOn: {
+      $type: String
+    },
+    data: {
+      $type: Object
+    },
+    list_id: {
+      $type: String
+    },
+    user_id: {
+      $type: String
+    }
   }, {
     toJSON: {
       transform: function (doc, ret) {
