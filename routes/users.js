@@ -5,6 +5,7 @@ var User = require("../models/User");
 var fs = require('fs')
 var config = require('../config')
 var authentication = require('../helper/authentication')
+var bcrypt = require('bcryptjs')
 
 router.post("/login", (req, res) => {
   const { email, password } = req.body;
@@ -20,29 +21,39 @@ router.post("/login", (req, res) => {
   User.findOne({ email })
     .then(user => {
 
-      if(password !== user.password) {
-        res.status(500).json({
-          status: false,
-          message: "Kullanıcı adı veya şifre yanlış."
+      bcrypt.compare(password, user.password, function(err, isMatch){
+
+        if (err) {
+          res.status(500).json({
+            status: false,
+            message: "Bir sorun oluştu lütfen tekrar deneyin."
+          });
+          return false;
+        }
+
+        if(!isMatch){
+          res.status(500).json({
+            status: false,
+            message: "Kullanıcı adı veya şifre yanlış."
+          });
+          return false
+        }
+
+        const payLoad = { email, user_id: user._id };
+        const token = jwt.sign(payLoad, {
+          key: fs.readFileSync('./private.pem'),
+          passphrase: config.pass
+        }, {
+          algorithm: 'RS256',
+          expiresIn: '60m' /* minutes */
+        })
+
+        res.json({
+          status: true,
+          email: user.email,
+          uid: user.id,
+          token
         });
-        return false
-      }
-
-      const payLoad = { email, user_id: user._id };
-      const token = jwt.sign(payLoad, {
-        key: fs.readFileSync('./private.pem'),
-        passphrase: config.pass
-      }, {
-        algorithm: 'RS256',
-        expiresIn: '60m' /* minutes */
-      })
-
-      res.json({
-        status: true,
-        email: user.email,
-        password: user.password,
-        uid: user.id,
-        token
       });
 
     })
@@ -99,25 +110,35 @@ router.post("/create", (req, res, next) => {
         })
       } else {
 
-        new User({
-          username: req.body.username,
-          email: req.body.email,
-          password: req.body.password
-        }).save().then((userDetail) => {
+        bcrypt.hash(req.body.password, 10, function(err, hash){
+          if (err) {
+            res.status(500).json({
+              status: false,
+              message: "Bir sorun oluştu lütfen tekrar deneyin."
+            });
+            return false;
+          }
 
-          User.findOne({ _id: userDetail._id })
-            .then(() => {
-              res.json({
-                status: true,
-                id: userDetail.id,
-                message: "Kullanıcı başarıyla oluşturuldu."
-              });
-            })
+          new User({
+            username: req.body.username,
+            email: req.body.email,
+            password: hash
+          }).save().then((userDetail) => {
 
-        }).catch((err) => {
-          res.status(500).json({
-            status: false,
-            message: "Kullanıcı oluşturulamadı."
+            User.findOne({ _id: userDetail._id })
+              .then(() => {
+                res.json({
+                  status: true,
+                  id: userDetail.id,
+                  message: "Kullanıcı başarıyla oluşturuldu."
+                });
+              })
+
+          }).catch((err) => {
+            res.status(500).json({
+              status: false,
+              message: "Kullanıcı oluşturulamadı."
+            });
           });
         });
 
