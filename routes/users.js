@@ -1,12 +1,9 @@
 var express = require('express');
 var router = express.Router();
-const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 var User = require("../models/User");
 var fs = require('fs')
 var config = require('../config')
-const cors = require('cors')
-var bodyParser = require('body-parser')
 var authentication = require('../helper/authentication')
 
 router.post("/login", (req, res) => {
@@ -17,6 +14,7 @@ router.post("/login", (req, res) => {
       status: false,
       message: "Lütfen tüm zorunlu alanları doldurun."
     });
+    return false
   }
 
   User.findOne({ email })
@@ -27,6 +25,7 @@ router.post("/login", (req, res) => {
           status: false,
           message: "Kullanıcı adı veya şifre yanlış."
         });
+        return false
       }
 
       const payLoad = { email, user_id: user._id };
@@ -35,14 +34,14 @@ router.post("/login", (req, res) => {
         passphrase: config.pass
       }, {
         algorithm: 'RS256',
-        expiresIn: '4w' /* minutes */
+        expiresIn: '60m' /* minutes */
       })
 
       res.json({
         status: true,
         email: user.email,
         password: user.password,
-        uid: user._id,
+        uid: user.id,
         token
       });
 
@@ -57,22 +56,25 @@ router.post("/login", (req, res) => {
 
 router.get("/refresh-token", authentication.authenticateJWT, (req, res) => {
 
+  const token = req.header('Authorization').replace('Bearer ', '')
   jwt.verify(token, fs.readFileSync('./public.pem'), {
     algorithms: ['RS256'],
   }, (err, user) => {
     if (err) {
-      return res.sendStatus(403);
+      return res.status(403).json({
+        message: err
+      });
     }
 
     const newToken = jwt.sign({
       email: user.email,
-      user_id: user._id
+      user_id: user.user_id
     }, {
       key: fs.readFileSync('./private.pem'),
       passphrase: config.pass
     }, {
       algorithm: 'RS256',
-      expiresIn: '180m' /* minutes */
+      expiresIn: '60m' /* minutes */
     })
 
     res.json({
@@ -83,13 +85,6 @@ router.get("/refresh-token", authentication.authenticateJWT, (req, res) => {
 
 });
 
-router.get('/', authentication.authenticateJWT, (req, res, next) => {
-  User.find().then((users) => {
-    res.json(users);
-  }).catch((err) => {
-    res.status(500).json(err);
-  });
-});
 
 router.post("/create", (req, res, next) => {
   const email = req.body.email;
@@ -114,7 +109,7 @@ router.post("/create", (req, res, next) => {
             .then(() => {
               res.json({
                 status: true,
-                id: userDetail._id,
+                id: userDetail.id,
                 message: "Kullanıcı başarıyla oluşturuldu."
               });
             })
